@@ -3,17 +3,19 @@ import validator from "validator";
 import bcrypt from "bcryptjs";
 
 enum UserRole {
+  Admin = "admin",
   SuperAdmin = "super_admin",
   RegularUser = "regular_user",
-  Admin = "admin",
 }
 
 interface User extends Document {
   name: string;
   email: string;
   password: string;
-  passwordConfirm: string;
+  isEmailConfirmed: boolean;
   role: UserRole[];
+  passwordChangedAt?: Date;
+  changedPasswordAfter(tokenIssuedAt: number): boolean;
 }
 
 const userSchema: Schema<User> = new mongoose.Schema({
@@ -22,6 +24,7 @@ const userSchema: Schema<User> = new mongoose.Schema({
     required: [true, "Please, provide a Name"],
     trim: true,
   },
+
   email: {
     type: String,
     required: true,
@@ -29,18 +32,35 @@ const userSchema: Schema<User> = new mongoose.Schema({
     lowercase: true,
     validate: [validator.isEmail, "Please, provide a valid email"],
   },
-  password: { type: String, required: true, minlength: 8, select: false },
-  passwordConfirm: {
-    type: String,
-    required: [true, "Please confirm your password"],
-  },
+
+  password: { type: String, required: true, minlength: 8 },
 
   role: {
     type: [String],
     enum: Object.values(UserRole),
     default: [UserRole.RegularUser],
   },
+
+  isEmailConfirmed: {
+    type: Boolean,
+    default: false,
+  },
+  passwordChangedAt: { type: Date, default: undefined },
 });
+
+userSchema.methods.changedPasswordAfter = function (
+  tokenIssuedAt: number
+): boolean {
+  if (this.passwordChangedAt) {
+    const passwordChangedTimestamp = Math.floor(
+      this.passwordChangedAt.getTime() / 1000
+    );
+
+    return tokenIssuedAt < passwordChangedTimestamp;
+  }
+
+  return false;
+};
 
 userSchema.pre<User>(
   "save",
@@ -61,13 +81,11 @@ userSchema.pre<User>(
 
 userSchema.set("toJSON", {
   transform: (document, returnedObject) => {
-    returnedObject.id = returnedObject._id.toString();
-
-    // the password should not be revealed
     delete returnedObject.password;
+    delete returnedObject.__v;
   },
 });
 
 const UserModel = mongoose.model<User>("User", userSchema);
 
-export { UserModel, User, UserRole };
+export { UserModel, User };

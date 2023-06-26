@@ -2,7 +2,7 @@ import mongoose, { mongo } from "mongoose";
 import logger from "./utils/logger";
 import config from "./utils/config";
 
-const mongoURL = config.MONGODB_URL;
+const mongoURL = process.env.DB_URL;
 
 const connectDB = async (): Promise<void> => {
   try {
