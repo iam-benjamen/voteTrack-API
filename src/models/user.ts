@@ -12,10 +12,11 @@ interface User extends Document {
   name: string;
   email: string;
   password: string;
-  isEmailConfirmed: boolean;
   role: UserRole[];
-  passwordChangedAt?: Date;
-  changedPasswordAfter(tokenIssuedAt: number): boolean;
+  isEmailConfirmed: boolean;
+  confirmationToken: string;
+  // passwordChangedAt?: Date;
+  // changedPasswordAfter(tokenIssuedAt: number): boolean;
 }
 
 const userSchema: Schema<User> = new mongoose.Schema({
@@ -45,7 +46,8 @@ const userSchema: Schema<User> = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  passwordChangedAt: { type: Date, default: undefined },
+  confirmationToken: { type: String },
+  // passwordChangedAt: { type: Date, default: undefined },
 });
 
 userSchema.methods.changedPasswordAfter = function (
