@@ -9,6 +9,7 @@ authRouter.post(
   authController.sendConfirmationEmail
 );
 authRouter.post("/login", authController.login);
+authRouter.post("/logout", authController.logout);
 authRouter.get("/confirm-email/:token", authController.confirmEmail);
 
 export default authRouter;

@@ -12,11 +12,10 @@ interface User extends Document {
   name: string;
   email: string;
   password: string;
-  role: UserRole[];
   isEmailConfirmed: boolean;
   confirmationToken: string;
-  // passwordChangedAt?: Date;
-  // changedPasswordAfter(tokenIssuedAt: number): boolean;
+  role: UserRole[];
+  assignedAdmin: Schema.Types.ObjectId;
 }
 
 const userSchema: Schema<User> = new mongoose.Schema({
@@ -46,23 +45,16 @@ const userSchema: Schema<User> = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+
   confirmationToken: { type: String },
-  // passwordChangedAt: { type: Date, default: undefined },
+
+  assignedAdmin: {
+    ref: "User",
+    type: Schema.Types.ObjectId,
+    default: null,
+  },
 });
 
-userSchema.methods.changedPasswordAfter = function (
-  tokenIssuedAt: number
-): boolean {
-  if (this.passwordChangedAt) {
-    const passwordChangedTimestamp = Math.floor(
-      this.passwordChangedAt.getTime() / 1000
-    );
-
-    return tokenIssuedAt < passwordChangedTimestamp;
-  }
-
-  return false;
-};
 
 userSchema.pre<User>(
   "save",
@@ -90,4 +82,4 @@ userSchema.set("toJSON", {
 
 const UserModel = mongoose.model<User>("User", userSchema);
 
-export { UserModel, User };
+export { UserModel, User, UserRole };

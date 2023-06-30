@@ -1,9 +1,9 @@
 import { NextFunction, Request, Response } from "express";
 import nodemailer, { TransportOptions } from "nodemailer";
-import { User, UserModel } from "../models/user";
+import { User, UserModel, UserRole } from "../models/user";
 import asyncHandler from "../utils/asynchandler";
-import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 //sign token
 const signToken = (id: string): string => {
@@ -15,14 +15,14 @@ const signToken = (id: string): string => {
 //signup controller
 const register = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { name, email, password } = req.body;
+    const { name, email, password, assignedAdmin } = req.body;
 
     try {
       //check if email already exists
       const existingUser = await UserModel.findOne({ email });
 
       if (existingUser) {
-        res.status(409).json({
+        return res.status(409).json({
           status: false,
           message: "Email already exists",
         });
@@ -39,16 +39,16 @@ const register = asyncHandler(
       const token = signToken(user._id);
       user.confirmationToken = token;
 
+      //Take note of assigned admin
+      const superAdmin = await UserModel.findOne({
+        role: { $in: [UserRole.SuperAdmin] },
+      });
+      user.assignedAdmin = assignedAdmin ? assignedAdmin : superAdmin?._id;
+
       //save user with confirmation code to database
       await user.save();
 
-      res.status(201).json({
-        status: true,
-        token,
-        data: {
-          user,
-        },
-      });
+      req.user = user;
 
       next();
     } catch (error) {
@@ -93,6 +93,10 @@ const login = asyncHandler(async (req: Request, res: Response) => {
     });
   }
 
+  //serve session
+  req.session.userId = user._id.toString();
+  req.session.email = user.email;
+
   //generate token and send response
   const token = signToken(user._id);
   res.status(200).json({
@@ -105,8 +109,17 @@ const protect = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const token = req.headers.authorization?.split(" ")[1];
 
+    //ensure auth token exists
     if (!token) {
       return res.status(401).json({ status: false, error: "Unauthorized" });
+    }
+
+    //ensure user is logged in
+    if (!req.session.userId) {
+      return res.status(401).json({
+        status: false,
+        message: "User not logged in",
+      });
     }
 
     try {
@@ -115,23 +128,15 @@ const protect = asyncHandler(
         iat: number;
       };
 
-      console.log(decoded);
-
-      if (decoded === null) {
+      if (!decoded) {
         return res.status(401).json({ status: false });
       }
 
+      //ensure user exists and is logged in
       const user = await UserModel.findById(decoded._id);
       if (!user) {
         return res.status(401).json({ status: false, error: "User not found" });
       }
-
-      // if (user.changedPasswordAfter(decoded.iat)) {
-      //   return res.status(401).json({
-      //     status: "fail",
-      //     message: "Password changed. Please log in again.",
-      //   });
-      // }
 
       req.user = user;
       next();
@@ -144,6 +149,7 @@ const protect = asyncHandler(
 const sendConfirmationEmail = asyncHandler(
   async (req: Request, res: Response) => {
     const { email } = req.body;
+    const user = req.user;
 
     try {
       const User = await UserModel.findOne({ email });
@@ -166,26 +172,27 @@ const sendConfirmationEmail = asyncHandler(
       });
 
       //verify connection configuration
-      // transporter.verify(function (error, success) {
-      //   if (error) {
-      //     console.log("here", error);
-      //   } else {
-      //     console.log("Server is ready to take your messages");
-      //   }
-      // });
+      transporter.verify(function (error, success) {
+        if (error) {
+          console.log("here", error);
+        } else {
+          console.log("Server is ready to take your messages");
+        }
+      });
 
-      const confirmationUrl = `localhost:3000/confirm-email/${confirmationToken}`;
+      const confirmationUrl = `localhost:3000/auth/confirm-email/${confirmationToken}`;
 
       await transporter.sendMail({
         from: "from@example.com",
         to: "to@example.com", //should be user email in real world
-        subject: "Test message title",
+        subject: "VoteTrack Email Confirmation",
         html: `Click the link below to confirm your email address:<br/><a href="${confirmationUrl}">${confirmationUrl}</a>`,
       });
 
-      res
-        .status(200)
-        .json({ status: true, message: "Confirmation email sent" });
+      res.status(201).json({
+        status: true,
+        message: "Registration successful, kindly confirm your email",
+      });
     } catch (error) {
       res.status(500).json({ error: "Failed to send confirmation email" });
     }
@@ -219,10 +226,27 @@ const confirmEmail = asyncHandler(async (req: Request, res: Response) => {
   }
 });
 
+const logout = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ status: false, error: "Not logged in" });
+  }
+
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({
+        status: false,
+        message: "Server error: Error Logging out",
+      });
+    }
+    res.status(200).json({ status: true, message: "Logout successful" });
+  });
+});
+
 export default {
   register,
   login,
   protect,
-  sendConfirmationEmail,
   confirmEmail,
+  logout,
+  sendConfirmationEmail,
 };
