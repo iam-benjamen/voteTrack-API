@@ -3,7 +3,7 @@ import nodemailer, { TransportOptions } from "nodemailer";
 import { User, UserModel, UserRole } from "../models/user";
 import asyncHandler from "../utils/asynchandler";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
 
 //sign token
 const signToken = (id: string): string => {
@@ -124,16 +124,16 @@ const protect = asyncHandler(
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
-        _id: string;
+        id: string;
         iat: number;
       };
-
+    
       if (!decoded) {
         return res.status(401).json({ status: false });
       }
 
       //ensure user exists and is logged in
-      const user = await UserModel.findById(decoded._id);
+      const user = await UserModel.findById(decoded.id);
       if (!user) {
         return res.status(401).json({ status: false, error: "User not found" });
       }

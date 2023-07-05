@@ -1,8 +1,12 @@
 import express, { Express, Request, Response } from "express";
+import pollController from "./controller/pollController";
 import session from "express-session";
+import cron from "node-cron";
 import MongoStore from "connect-mongo";
 import middleware from "./utils/middleware";
 import authRouter from "./routes/authRoutes";
+import userRouter from "./routes/userRoutes";
+import pollsRouter from "./routes/pollRoutes";
 
 const app: Express = express();
 
@@ -21,16 +25,21 @@ app.use(
     }),
     cookie: {
       secure: false,
-      maxAge: 0.1 * 60 * 60 * 1000,
+      maxAge: 24 * 60 * 60 * 1000,
     },
   })
 );
 
 app.get("/", (req: Request, res: Response) => {
-  res.send("Hello world!");
+  res.send("voteTrack!");
 });
 
+// Schedule the function to run every minute
+cron.schedule("* * * * *", pollController.updateActiveStatus);
+
 app.use("/auth", authRouter);
+app.use("/voter", userRouter);
+app.use("/poll", pollsRouter);
 app.use(middleware.unknownEndpoint);
 
 export default app;

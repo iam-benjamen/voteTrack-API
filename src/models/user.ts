@@ -55,6 +55,12 @@ const userSchema: Schema<User> = new mongoose.Schema({
   },
 });
 
+userSchema.set("toJSON", {
+  transform: (document, returnedObject) => {
+    delete returnedObject.password;
+    delete returnedObject.__v;
+  },
+});
 
 userSchema.pre<User>(
   "save",
@@ -73,12 +79,7 @@ userSchema.pre<User>(
   }
 );
 
-userSchema.set("toJSON", {
-  transform: (document, returnedObject) => {
-    delete returnedObject.password;
-    delete returnedObject.__v;
-  },
-});
+
 
 const UserModel = mongoose.model<User>("User", userSchema);
 
