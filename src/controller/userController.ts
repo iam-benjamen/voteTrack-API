@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import asyncHandler from "../utils/asynchandler";
-import { UserModel } from "../models/user";
+import { UserModel, UserRole } from "../models/user";
 
 const isRestrictedTo = (role: string) => {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -90,10 +90,43 @@ const getUserProfile = asyncHandler(async (req: Request, res: Response) => {
   }
 });
 
+//become an admin
+const becomeAdmin = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const userId = req.user._id;
+
+    // Check if the user is already an admin
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        status: false,
+        message: "User not found",
+      });
+    }
+
+    if (user.role.includes(UserRole.Admin)) {
+      return res
+        .status(400)
+        .json({ status: false, message: "User is already an admin" });
+    }
+
+    // Update the user's role to include "admin"
+    user.role.push(UserRole.Admin);
+    await user.save();
+
+    res.status(200).json({
+      status: true,
+      message: "User has been granted admin privileges",
+    });
+  } catch (error) {
+    res.status(500).json({ status: false, message: "Internal server error" });
+  }
+});
 
 export default {
   isRestrictedTo,
   getAllVoters,
   getAdminVoters,
   getUserProfile,
+  becomeAdmin,
 };

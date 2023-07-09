@@ -1,4 +1,4 @@
-import mongoose, { Document, Error, Schema } from "mongoose";
+import mongoose, { Document, Schema } from "mongoose";
 
 interface PollOption {
   option: string;
@@ -10,14 +10,23 @@ interface PollField {
   options: PollOption[];
 }
 
+export interface Vote {
+  userId: Schema.Types.ObjectId;
+  vote: {
+    fieldId: Schema.Types.ObjectId;
+    optionId: Schema.Types.ObjectId;
+  }[];
+}
 interface Poll extends Document {
   name: string;
   description: string;
-  fields: PollField[];
   active: boolean;
   startDate: Date;
   expirationDate: Date;
   createdBy: Schema.Types.ObjectId;
+  fields: PollField[];
+  isInviteOnly: boolean;
+  votes: Vote[];
 }
 
 const pollOptionSchema: Schema<PollOption> = new mongoose.Schema({
@@ -64,7 +73,7 @@ const pollSchema: Schema<Poll> = new mongoose.Schema({
   startDate: {
     type: Date,
     required: true,
-    default: Date.now,
+    default: Date.now(),
   },
   expirationDate: {
     type: Date,
@@ -75,13 +84,36 @@ const pollSchema: Schema<Poll> = new mongoose.Schema({
     ref: "User",
     required: true,
   },
+  isInviteOnly: {
+    type: Boolean,
+    default: false,
+  },
+  votes: [
+    {
+      userId: {
+        type: Schema.Types.ObjectId,
+        required: false,
+      },
+      vote: [
+        {
+          fieldId: {
+            type: Schema.Types.ObjectId,
+            required: false,
+          },
+          optionId: {
+            type: Schema.Types.ObjectId,
+            required: false,
+          },
+        },
+      ],
+    }, 
+  ],
 });
 
 // Pre-save middleware to set the 'active' field based on the current date
 pollSchema.pre("save", function (next) {
   const currentDate = new Date();
   if (this.isModified("startDate") || this.isModified("expirationDate")) {
-
     if (this.startDate <= currentDate && this.expirationDate > currentDate) {
       this.active = true;
     } else {
@@ -93,5 +125,4 @@ pollSchema.pre("save", function (next) {
 });
 
 const PollModel = mongoose.model<Poll>("Poll", pollSchema);
-
-export { PollModel, Poll };
+export { PollModel, Poll, PollField };

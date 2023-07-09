@@ -1,9 +1,10 @@
 import { NextFunction, Request, Response } from "express";
 import nodemailer, { TransportOptions } from "nodemailer";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import { User, UserModel, UserRole } from "../models/user";
 import asyncHandler from "../utils/asynchandler";
 import bcrypt from "bcryptjs";
-import jwt, { JwtPayload } from "jsonwebtoken";
+
 
 //sign token
 const signToken = (id: string): string => {
@@ -127,7 +128,7 @@ const protect = asyncHandler(
         id: string;
         iat: number;
       };
-    
+
       if (!decoded) {
         return res.status(401).json({ status: false });
       }
@@ -172,13 +173,13 @@ const sendConfirmationEmail = asyncHandler(
       });
 
       //verify connection configuration
-      transporter.verify(function (error, success) {
-        if (error) {
-          console.log("here", error);
-        } else {
-          console.log("Server is ready to take your messages");
-        }
-      });
+      // transporter.verify(function (error, success) {
+      //   if (error) {
+      //     console.log("here", error);
+      //   } else {
+      //     console.log("Server is ready to take your messages");
+      //   }
+      // });
 
       const confirmationUrl = `localhost:3000/auth/confirm-email/${confirmationToken}`;
 
@@ -242,6 +243,20 @@ const logout = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+const validateXAppKey = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const xAppKey = req.headers["x-app-key"];
+
+    //check if Xapp is valid
+    if (xAppKey === process.env.XAPP_KEY) {
+      next();
+    } else {
+      // Invalid XAPP key
+      res.status(401).json({ status: false, message: "Invalid X_APP_KEY" });
+    }
+  }
+);
+
 export default {
   register,
   login,
@@ -249,4 +264,5 @@ export default {
   confirmEmail,
   logout,
   sendConfirmationEmail,
+  validateXAppKey,
 };

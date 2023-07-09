@@ -7,12 +7,14 @@ import middleware from "./utils/middleware";
 import authRouter from "./routes/authRoutes";
 import userRouter from "./routes/userRoutes";
 import pollsRouter from "./routes/pollRoutes";
+import authController from "./controller/authController";
 
 const app: Express = express();
 
 app.use(express.json());
 app.use(middleware.requestLogger);
 app.use(middleware.errorHandler);
+app.use(authController.validateXAppKey);
 
 app.use(
   session({
@@ -35,7 +37,7 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 // Schedule the function to run every minute
-cron.schedule("* * * * *", pollController.updateActiveStatus);
+// cron.schedule("* * * * *", pollController.updateActiveStatus);
 
 app.use("/auth", authRouter);
 app.use("/voter", userRouter);

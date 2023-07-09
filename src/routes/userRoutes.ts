@@ -23,4 +23,12 @@ userRouter.get(
   authController.protect,
   userController.getUserProfile
 );
+
+userRouter.get(
+  "/become-admin",
+  authController.protect,
+  userController.isRestrictedTo("regular_user"),
+  userController.becomeAdmin
+);
+
 export default userRouter;
