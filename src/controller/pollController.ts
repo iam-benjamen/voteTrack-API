@@ -3,11 +3,13 @@ import { Poll, PollField, PollModel, Vote } from "../models/polls";
 import asyncHandler from "../utils/asynchandler";
 import { UserModel, UserRole } from "../models/user";
 import { Schema } from "mongoose";
+import { AllowedVotersModel } from "../models/invited-voter";
 
 interface UserUpdateFields {
   name: string;
   description: string;
   fields: PollField;
+  isInviteOnly: boolean;
 }
 
 const createPoll = asyncHandler(
@@ -64,7 +66,6 @@ const createPoll = asyncHandler(
   }
 );
 
-
 //cron schedule function to update active status of polls
 const updateActiveStatus = async () => {
   try {
@@ -90,12 +91,11 @@ const updateActiveStatus = async () => {
       }
     );
 
-    console.log("Active status updated sucessfully");
+    console.log("Active status updated successfully");
   } catch (err) {
     console.log("Error updating active status", err);
   }
 };
-
 
 //get all polls(super admin)
 const getAllPolls = asyncHandler(async (req: Request, res: Response) => {
@@ -108,7 +108,6 @@ const getAllPolls = asyncHandler(async (req: Request, res: Response) => {
     res.status(500).json({ status: false, message: error.message });
   }
 });
-
 
 //get admin polls(polls created by admin)
 const getAdminPolls = asyncHandler(async (req: Request, res: Response) => {
@@ -132,6 +131,7 @@ const updatePoll = asyncHandler(
       "name",
       "description",
       "fields",
+      "isInviteOnly",
     ];
 
     const updates: Partial<UserUpdateFields> = {};
@@ -182,8 +182,8 @@ const updatePoll = asyncHandler(
   }
 );
 
+//Participate in poll
 
-//vote
 const participateInPoll = asyncHandler(async (req: Request, res: Response) => {
   const userId: Schema.Types.ObjectId = req.user._id;
   const votes: Vote["vote"] = req.body;
@@ -208,7 +208,7 @@ const participateInPoll = asyncHandler(async (req: Request, res: Response) => {
       });
     }
 
-    // Check if the user has already voted in this poll
+    //Check if the user has already voted in this poll
     if (poll.votes.find((entry) => String(entry.userId) === String(userId))) {
       return res.status(400).json({
         status: false,
@@ -216,20 +216,49 @@ const participateInPoll = asyncHandler(async (req: Request, res: Response) => {
       });
     }
 
-    // Check if the poll is invite-only
-    if (poll.isInviteOnly) {
-      return res.status(403).json({
-        status: false,
-        message: "Access denied. This poll is invite-only",
-      });
-    }
-
     const user = await UserModel.findById(userId);
-
     if (!user) {
       return res.status(404).json({
         status: false,
         message: "User not found",
+      });
+    }
+
+    // Check if the poll is invite only
+    if (poll.isInviteOnly) {
+      const allowedVoter = await AllowedVotersModel.findOne({
+        pollId,
+        emails: { $in: user.email },
+      });
+
+      if (!allowedVoter) {
+        return res.status(403).json({
+          status: false,
+          message: "Sorry, You are not allowed to participate in this poll",
+        });
+      }
+    }
+
+    //Validate field & options Id
+    const fieldIds = votes.map((vote) => vote.fieldId.toString());
+    const optionIds = votes.map((vote) => vote.optionId.toString());
+
+    const validFieldsIds = poll.fields.map((field) => field._id.toString());
+    const validOptionIds = poll.fields.flatMap((field) =>
+      field.options.map((option) => option._id.toString())
+    );
+
+    const areFieldIdsValid = fieldIds.every((id) =>
+      validFieldsIds.includes(id)
+    );
+    const areOptionIdsValid = optionIds.every((id) =>
+      validOptionIds.includes(id)
+    );
+
+    if (!areFieldIdsValid || !areOptionIdsValid) {
+      return res.status(400).json({
+        status: false,
+        message: "Invalid vote!",
       });
     }
 
@@ -249,11 +278,56 @@ const participateInPoll = asyncHandler(async (req: Request, res: Response) => {
   }
 });
 
+// Add Allowed Voters
+const addAllowedVoters = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { pollId, emails } = req.body;
+    const { userId } = req.user;
+    try {
+      // ensure the poll exists
+      const poll = await PollModel.findById(pollId);
+      if (!poll) {
+        return res
+          .status(404)
+          .json({ status: false, message: "Poll not found" });
+      }
 
-//invite voters
-//Live result
+      //ensure only poll creator can add voters
+      if (String(poll.createdBy) !== String(userId)) {
+        return res.status(403).json({
+          message:
+            "Access denied. Only the poll creator can add allowed voters",
+        });
+      }
+
+      // Find the allowed voters entry for the given pollId
+      let allowedVoters = await AllowedVotersModel.findOne({ pollId });
+
+      if (!allowedVoters) {
+        allowedVoters = new AllowedVotersModel({
+          pollId,
+          emails,
+        });
+      } else {
+        const uniqueEmails = [...new Set([...allowedVoters.emails, ...emails])];
+        allowedVoters.emails = uniqueEmails;
+      }
+
+      await allowedVoters.save();
+      return res
+        .status(201)
+        .json({ status: true, message: "Allowed voters added successfully" });
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ status: false, message: "Failed to add allowed voters" });
+    }
+  }
+);
+
+
 //Final result
-
+//delete poll
 
 export default {
   createPoll,
@@ -262,4 +336,5 @@ export default {
   getAdminPolls,
   updatePoll,
   participateInPoll,
+  addAllowedVoters,
 };

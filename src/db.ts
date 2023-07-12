@@ -1,6 +1,6 @@
 import mongoose, { mongo } from "mongoose";
 import logger from "./utils/logger";
-import config from "./utils/config";
+// import config from "./utils/config";
 
 const mongoURL = process.env.DB_URL;
 

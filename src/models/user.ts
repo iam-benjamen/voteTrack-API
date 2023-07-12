@@ -1,4 +1,4 @@
-import mongoose, { CallbackError, Document, Schema } from "mongoose";
+import mongoose, {CallbackError, Document, Schema} from "mongoose";
 import validator from "validator";
 import bcrypt from "bcryptjs";
 
@@ -68,8 +68,7 @@ userSchema.pre<User>(
     if (this.isModified("password") || this.isNew) {
       try {
         const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(this.password, salt);
-        this.password = hashedPassword;
+        this.password = await bcrypt.hash(this.password, salt);
       } catch (error: unknown) {
         return next(error as CallbackError);
       }

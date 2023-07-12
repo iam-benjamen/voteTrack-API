@@ -1,13 +1,13 @@
-import express, { Express, Request, Response } from "express";
+import express, { Express, NextFunction, Request, Response } from "express";
 import pollController from "./controller/pollController";
-import session from "express-session";
+import session from "./utils/session";
 import cron from "node-cron";
-import MongoStore from "connect-mongo";
 import middleware from "./utils/middleware";
 import authRouter from "./routes/authRoutes";
 import userRouter from "./routes/userRoutes";
 import pollsRouter from "./routes/pollRoutes";
 import authController from "./controller/authController";
+import { measureElapsedTime } from "./utils/performance";
 
 const app: Express = express();
 
@@ -15,22 +15,9 @@ app.use(express.json());
 app.use(middleware.requestLogger);
 app.use(middleware.errorHandler);
 app.use(authController.validateXAppKey);
+app.use(session);
+app.use(measureElapsedTime);
 
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "MY_SECRET_KEY",
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({
-      mongoUrl: process.env.DB_URL,
-      collectionName: "voteTrack-sessions",
-    }),
-    cookie: {
-      secure: false,
-      maxAge: 24 * 60 * 60 * 1000,
-    },
-  })
-);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("voteTrack!");

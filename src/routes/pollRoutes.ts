@@ -39,5 +39,11 @@ pollsRouter.post(
   pollController.participateInPoll
 );
 
+pollsRouter.post(
+  "/add-voters",
+  authController.protect,
+  userController.isRestrictedTo("admin"),
+  pollController.addAllowedVoters
+);
 
 export default pollsRouter;
