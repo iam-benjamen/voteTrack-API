@@ -10,6 +10,7 @@ voteTrack is a Node.js application for managing polls, it enables admins to crea
 4. Invitation-based voting system
 5. Real-time & final voting results
 
+## Project Structure
 ```
 |--src\
    |--controllers\    # Route controllers (controller layer)
