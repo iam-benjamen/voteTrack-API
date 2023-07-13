@@ -27,15 +27,15 @@ voteTrack is a Node.js application for managing polls, it enables admins to crea
  ```
 
 ## Technologies
-- **Node.js**: Server-side JavaScript runtime environment.
+- **[Node.js](https://nodejs.org/)**: Server-side JavaScript runtime environment.
 - **[Express](https:www.expressjs.com)**: Web application framework for Node.js.
-- **TypeScript**: Typed superset of JavaScript 
+- **[TypeScript](https://www.typescriptlang.org/)**: Typed superset of JavaScript 
 - **[MongoDB](https://www.mongodb.com) & [Mongoose](https://mongoosejs.com)**: NoSQL database & Object Data Modeling (ODM) library for MongoDB.
 - **JSON Web Tokens (JWT)**: Used for user authentication and authorization.
 - **Environment variables**: using [dotenv](https://github.com/motdotla/dotenv)  
-- **Bcryptjs**: Password hashing and validation.
-- **Node-cron**: Task scheduling library
-- **Nodemailer**: Mailing service
+- **[Bcryptjs](https://www.npmjs.com/package/bcryptjs)**: Password hashing and validation.
+- **[Node-cron](https://www.npmjs.com/package/node-cron)**: Task scheduling library
+- **[MailTrap](https://mailtrap.io/)**: Mailing service
 - **CORS**: Cross-Origin Resource-Sharing enabled using [cors](https://github.com/expressjs/cors)
 - **Express-session**: managing server session
 - **Testing**: unit and integration tests using [Jest](https://jestjs.io)
@@ -46,7 +46,18 @@ To run the project locally, follow these steps:
 1. Clone the repository:
    git clone `https://github.com/iam-benjamen/voteTrack.git`
 2. Install dependencies: `npm install`
-3. Configure the environment variables (database connection, JWT secret, etc.).
+3. Create a .env file at the root of the project and configure the environment variables
+   ```
+      PORT=
+      DB_URL=
+      JWT_SECRET=
+      JWT_EXPIRES_IN=
+      SESSION_SECRET=
+      SMTP_HOST=
+      SMTP_PORT=
+      XAPP_KEY=
+   ```
+
 4. Start the server: `npm run dev`
    
 ## Contributing
