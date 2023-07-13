@@ -1,32 +1,63 @@
-# voteTrack
-voteTrack is a polling application that enables registered users (admins) to create polls valid for a specific period of time. It allows regular registered users to participate in the polls, and provides live and final results at the end of the poll period.
+# voteTrack REST API
+Hi there, Welcome to voteTrack project documentation! This guide will help you understand the project, set it up locally, and explore its features. Feel free to contribute and make the documentation even better!
+
+voteTrack is a Node.js application for managing polls, it enables admins to create polls valid for a specified period of time, and registered voters to participate in the polls, it also provides live and final results at the end of the poll period. The admin specifies whether the poll is open to anyone or invited voters only.
 
 ## Features
-1. User Registration: Users can create an account with their name, email, and password. They can have different roles such as regular user, admin, or superadmin.
-2. Admin Approval: Regular users who wish to become admins must request approval from a superadmin. Superadmins can approve or reject admin requests.
-3. Poll Creation: Admins can create polls with a specified title, description, options, and a duration during which users can vote.
-4. User Authentication: User login and authentication are implemented using JWT (JSON Web Tokens) for secure access to protected routes.
-5. Poll Participation: Registered users can participate in active polls by selecting one or multiple options and submitting their votes.
-6. Real-time Results: Live results are displayed to users during an active poll, allowing them to see the current voting statistics.
-7. Final Results: At the end of the poll duration, final results are revealed to all users, displaying the total votes and percentages for each option.
-8. Access Control: Only registered and authenticated users can participate in polls. Admins have additional privileges for poll creation and management.
-  
-## Technologies Used
-1. Node.js: Server-side JavaScript runtime environment.
-2. Express: Web application framework for Node.js.
-3. MongoDB: NoSQL database for storing user and poll data.
-4. Mongoose: Object Data Modeling (ODM) library for MongoDB.
-5. TypeScript: Typed superset of JavaScript for improved developer productivity.
-6. JSON Web Tokens (JWT): Used for user authentication and authorization.
-7. bcryptjs: Password hashing and validation.
-8. Socket.io: Real-time communication for live results.
+1. User authentication and authorization
+2. Creation and management of polls
+3. Support for invite-only and open participation polls
+4. Invitation-based voting system
+5. Real-time & final voting results
+
+## Project Structure
+```
+|--src\
+   |--controllers\    # Route controllers (controller layer)
+   |--models\         # Mongoose models (data layer)
+   |--routes\         # API Routes
+   |--types\          # custom types
+   |--utils\          # Utility classes and functions
+   |--config\         # Environment variables and configuration-related things
+   |--db.ts           # database configurations
+   |--app.ts          # Express app
+   |--index.ts        # App entry point
+
+|--tests\
+ ```
+
+## Technologies
+- **[Node.js](https://nodejs.org/)**: Server-side JavaScript runtime environment.
+- **[Express](https:www.expressjs.com)**: Web application framework for Node.js.
+- **[TypeScript](https://www.typescriptlang.org/)**: Typed superset of JavaScript 
+- **[MongoDB](https://www.mongodb.com) & [Mongoose](https://mongoosejs.com)**: NoSQL database & Object Data Modeling (ODM) library for MongoDB.
+- **JSON Web Tokens (JWT)**: Used for user authentication and authorization.
+- **Environment variables**: using [dotenv](https://github.com/motdotla/dotenv)  
+- **[Bcryptjs](https://www.npmjs.com/package/bcryptjs)**: Password hashing and validation.
+- **[Node-cron](https://www.npmjs.com/package/node-cron)**: Task scheduling library
+- **[MailTrap](https://mailtrap.io/)**: Mailing service
+- **CORS**: Cross-Origin Resource-Sharing enabled using [cors](https://github.com/expressjs/cors)
+- **Express-session**: managing server session
+- **Testing**: unit and integration tests using [Jest](https://jestjs.io)
 
 ## Getting Started
 To run the project locally, follow these steps:
 
-1. Clone the repository: git clone `https://github.com/iam-benjamen/voteTrack.git`
+1. Clone the repository:
+   git clone `https://github.com/iam-benjamen/voteTrack.git`
 2. Install dependencies: `npm install`
-3. Configure the environment variables (database connection, JWT secret, etc.).
+3. Create a .env file at the root of the project and configure the environment variables
+   ```
+      PORT=
+      DB_URL=
+      JWT_SECRET=
+      JWT_EXPIRES_IN=
+      SESSION_SECRET=
+      SMTP_HOST=
+      SMTP_PORT=
+      XAPP_KEY=
+   ```
+
 4. Start the server: `npm run dev`
    
 ## Contributing
