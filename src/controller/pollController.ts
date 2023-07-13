@@ -325,9 +325,48 @@ const addAllowedVoters = asyncHandler(
   }
 );
 
+//delete poll
+// DELETE /api/polls/:pollId
+const deletePoll = asyncHandler(async (req: Request, res: Response) => {
+  const { pollId } = req.params;
+
+  try {
+    // Find the poll by ID
+    const poll = await PollModel.findById(pollId);
+
+    if (!poll) {
+      return res.status(404).json({
+        status: false,
+        message: "Poll not found",
+      });
+    }
+
+    // Check if the requesting user is the creator of the poll
+    if (poll.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        status: false,
+        message: "Access denied. Only the creator can delete this poll",
+      });
+    }
+
+    //delete poll
+    poll.deleteOne();
+
+    return res.status(200).json({
+      status: true,
+      message: "Poll deleted successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: false,
+      message: "Internal server error",
+    });
+  }
+});
 
 //Final result
-//delete poll
+
+
 
 export default {
   createPoll,
@@ -336,5 +375,5 @@ export default {
   getAdminPolls,
   updatePoll,
   participateInPoll,
-  addAllowedVoters,
+  addAllowedVoters,deletePoll
 };
