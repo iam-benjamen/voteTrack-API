@@ -46,4 +46,18 @@ pollsRouter.post(
   pollController.addAllowedVoters
 );
 
+pollsRouter.post(
+  "/delete-poll/:pollId",
+  authController.protect,
+  userController.isRestrictedTo("admin"),
+  pollController.deletePoll
+);
+
+pollsRouter.get(
+  "/poll-results/:pollId",
+  authController.protect,
+  userController.isRestrictedTo("admin"),
+  pollController.computePollResults
+);
+
 export default pollsRouter;

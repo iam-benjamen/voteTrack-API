@@ -1,15 +1,22 @@
 import { Request, Response, NextFunction } from "express";
-import { Poll, PollField, PollModel, Vote } from "../models/polls";
-import asyncHandler from "../utils/asynchandler";
+import { Poll, PollField, PollModel, Vote, voteResult } from "../models/polls";
 import { UserModel, UserRole } from "../models/user";
 import { Schema } from "mongoose";
 import { AllowedVotersModel } from "../models/invited-voter";
+import computePollResultFromDatabase from "../helpers/resultPipeline";
+import asyncHandler from "../utils/asynchandler";
 
 interface UserUpdateFields {
   name: string;
   description: string;
   fields: PollField;
   isInviteOnly: boolean;
+}
+
+interface ApiResponse<T> {
+  status: boolean;
+  message: string;
+  data?: T;
 }
 
 const createPoll = asyncHandler(
@@ -240,6 +247,7 @@ const participateInPoll = asyncHandler(async (req: Request, res: Response) => {
     }
 
     //Validate field & options Id
+    //optimize this, will slow down with scale
     const fieldIds = votes.map((vote) => vote.fieldId.toString());
     const optionIds = votes.map((vote) => vote.optionId.toString());
 
@@ -251,6 +259,7 @@ const participateInPoll = asyncHandler(async (req: Request, res: Response) => {
     const areFieldIdsValid = fieldIds.every((id) =>
       validFieldsIds.includes(id)
     );
+
     const areOptionIdsValid = optionIds.every((id) =>
       validOptionIds.includes(id)
     );
@@ -258,7 +267,7 @@ const participateInPoll = asyncHandler(async (req: Request, res: Response) => {
     if (!areFieldIdsValid || !areOptionIdsValid) {
       return res.status(400).json({
         status: false,
-        message: "Invalid vote!",
+        message: "Invalid vote! Field or option does not exist",
       });
     }
 
@@ -278,7 +287,8 @@ const participateInPoll = asyncHandler(async (req: Request, res: Response) => {
   }
 });
 
-// Add Allowed Voters
+// Add Allowed Voters - receieves array of emails
+
 const addAllowedVoters = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const { pollId, emails } = req.body;
@@ -290,6 +300,12 @@ const addAllowedVoters = asyncHandler(
         return res
           .status(404)
           .json({ status: false, message: "Poll not found" });
+      }
+
+      if (poll.isInviteOnly === false) {
+        return res
+          .status(404)
+          .json({ status: false, message: "Poll is open to everyone" });
       }
 
       //ensure only poll creator can add voters
@@ -325,7 +341,6 @@ const addAllowedVoters = asyncHandler(
   }
 );
 
-//delete poll
 // DELETE /api/polls/:pollId
 const deletePoll = asyncHandler(async (req: Request, res: Response) => {
   const { pollId } = req.params;
@@ -351,13 +366,12 @@ const deletePoll = asyncHandler(async (req: Request, res: Response) => {
 
     //delete poll
     poll.deleteOne();
-
     return res.status(200).json({
       status: true,
       message: "Poll deleted successfully",
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       status: false,
       message: "Internal server error",
     });
@@ -365,7 +379,65 @@ const deletePoll = asyncHandler(async (req: Request, res: Response) => {
 });
 
 //Final result
+const computePollResults = asyncHandler(async (req: Request, res: Response) => {
+  const { pollId } = req.params;
 
+  try {
+    const poll = await PollModel.findById(pollId);
+
+    if (!poll) {
+      return res.status(404).json({
+        status: false,
+        message: "Poll not found",
+      });
+    }
+
+    const results = await PollModel.aggregate([
+      { $match: { _id: poll._id } },
+      { $unwind: "$votes" },
+      { $unwind: "$votes.vote" },
+      {
+        $group: {
+          _id: {
+            fieldId: "$votes.vote.fieldId",
+            optionId: "$votes.vote.optionId",
+          },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    results.map((result) => {
+      poll.fields.map((field) => {
+        if (result._id.fieldId.toString() === field._id.toString()) {
+          result["field"] = field.name;
+        }
+
+        field.options.map((option) => {
+          if (option._id.toString() === result._id.optionId.toString()) {
+            result["option"] = option.option;
+          }
+        });
+      });
+
+      delete result._id;
+    });
+
+    return res.status(200).json({
+      status: true,
+      message: results,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: false,
+      message: "Failed to compute results",
+      err,
+    });
+  }
+});
+
+//think caching computed result for a poll once the poll activation date is past.
+//Prevent too frequent round trips to the database
 
 
 export default {
@@ -375,5 +447,7 @@ export default {
   getAdminPolls,
   updatePoll,
   participateInPoll,
-  addAllowedVoters,deletePoll
+  addAllowedVoters,
+  deletePoll,
+  computePollResults,
 };

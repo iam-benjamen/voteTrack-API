@@ -18,7 +18,7 @@ interface User extends Document {
   assignedAdmin: Schema.Types.ObjectId;
 }
 
-const userSchema: Schema<User> = new mongoose.Schema({
+const userSchema: Schema<User> = new mongoose.Schema({  
   name: {
     type: String,
     required: [true, "Please, provide a Name"],
@@ -79,7 +79,5 @@ userSchema.pre<User>(
 );
 
 
-
 const UserModel = mongoose.model<User>("User", userSchema);
-
 export { UserModel, User, UserRole };
